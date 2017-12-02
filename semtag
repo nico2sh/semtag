@@ -499,7 +499,11 @@ function get_work_tree_status {
 }
 
 function get_current {
-  local __commitcount="$(git rev-list $lastversion.. --count)"
+  if git rev-parse -q --verify "refs/tags/$lastversion" >/dev/null; then
+    local __commitcount="$(git rev-list $lastversion.. --count)"
+  else
+    local __commitcount="$(git rev-list --count HEAD)"
+  fi
   local __status=
   get_work_tree_status __status
   
