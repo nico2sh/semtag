@@ -5,6 +5,8 @@ Semantic Tagging Script for Git
 
 Notes: *This script is inspired by the [Nebula Release Plugin](https://github.com/nebula-plugins/nebula-release-plugin), and borrows a couple of lines from [Semver Bash Tool](https://github.com/fsaintjacques/semver-tool) (mostly the version comparison and the semantic version regex).*
 
+[A quick history of this script](https://medium.com/@dr_notsokind/semantic-tagging-with-git-1254dbded22)
+
 This is a script to help out version bumping on a project following the [Semantic Versioning](http://semver.org/) specification. It uses Git Tags to keep track the versions and the commit log between them, so no extra files are needed. It can be combined with release scripts, git hooks, etc, to have a consistent versioning.
 
 ### Why Bash? (and requirements)
