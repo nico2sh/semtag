@@ -9,7 +9,9 @@ fi
 echo "Using scope $SCOPE"
 
 # We get the next version, without tagging
-nextversion="$(sh ./semtag final -os $SCOPE)"
+echo "Getting next version"
+nextversion="$(source semtag final -os $SCOPE)"
+echo "Publishing with version: $nextversion"
 
 # We replace the placeholder in the source with the new version
 replace="s/^PROG_VERSION=\"[^\"]*\"/PROG_VERSION=\"$nextversion\"/g"
