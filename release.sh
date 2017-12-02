@@ -40,4 +40,4 @@ if ! git push ; then
 fi
 
 # We update the tag with the new version
-sh ./semtag final -v $nextversion
+source semtag final -v $nextversion
