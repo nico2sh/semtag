@@ -19,7 +19,7 @@ Plus, the `semtag` sctipt doesn't depend on the build system (so no need to use 
 
 ## Usage
 
-Copy the `semtag.sh` script in your project's directory.
+Copy the `semtag` script in your project's directory.
 
 Semtag distinguishes between final versions and non-final versions. Possible non-final versions are `alpha`, `beta` and `rc` (release candidate).
 
@@ -28,7 +28,7 @@ Starts from version `0.0.0`, so the first time you initialize a version, it will
 Use the script as follows:
 
 ```
-$ semtag.sh <commdand> <options>
+$ semtag <commdand> <options>
 ```
 
 Info commands:
@@ -57,7 +57,7 @@ If you want to manually set a version, use the `-v <version>` option. Version mu
 
 ### Usage Examples
 
-See the `release.sh` script as an example. The script gets the next version to tag, uses that version to update the `README.md` file (this one!), and the script's. Then commits the changes, and finally tags the project with this latest version.
+See the `release` script as an example. The script gets the next version to tag, uses that version to update the `README.md` file (this one!), and the script's. Then commits the changes, and finally tags the project with this latest version.
 
 #### Gradle example
 
@@ -69,7 +69,7 @@ version=getVersionTag()
 def getVersionTag() {
   def hashStdOut = new ByteArrayOutputStream()
   exec {
-    commandLine "$rootProject.projectDir/semtag.sh", "getcurrent"
+    commandLine "$rootProject.projectDir/semtag", "getcurrent"
     standardOutput = hashStdOut
   }
 
@@ -82,7 +82,7 @@ This way, the project's version every time you make a build, will be aligned wit
 ```
 def tagFinalVersion() {
   exec {
-    commandLine "$rootProject.projectDir/semtag.sh", "final", "-s minor"
+    commandLine "$rootProject.projectDir/semtag", "final", "-s minor"
     standardOutput = hashStdOut
   }
   
@@ -101,11 +101,11 @@ Or create your own task for tagging and releasing. The goal of this script is to
 Semtag tries to guess which is the following version by using the current final version as a reference for bumping. For example:
 
 ```
-$ semtag.sh get
+$ semtag get
 Current final version: v1.0.0
 Last tagged version:   v1.0.0
-$ semtag.sh candidate -s minor
-$ semtag.sh get
+$ semtag candidate -s minor
+$ semtag get
 Current final version: v1.0.0
 Last tagged version:   v1.1.0-rc.1
 ```
@@ -113,8 +113,8 @@ Last tagged version:   v1.1.0-rc.1
 Above it used the `v1.0.0` version for bumping a minor release candidate. If we try to increase a patch:
 
 ```
-$ semtag.sh candidate -s patch
-$ semtag.sh get
+$ semtag candidate -s patch
+$ semtag get
 Current final version: v1.0.0
 Last tagged version:   v1.1.0-rc.2
 ```
@@ -122,8 +122,8 @@ Last tagged version:   v1.1.0-rc.2
 Again, it used the `v1.0.0` version as a reference to increase the patch version (so it should be bumped to `v1.0.1-rc.1`), but since the last tagged version is higher, it bumped the release candidate number instead. If we release a beta version:
 
 ```
-$ semtag.sh beta -s patch
-$ semtag.sh get
+$ semtag beta -s patch
+$ semtag get
 Current final version: v1.0.0
 Last tagged version:   v1.1.1-beta.1
 ```
