@@ -6,14 +6,11 @@ PROG_VERSION="v0.0.1"
 SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
 IDENTIFIER_REGEX="^\-([0-9A-Za-z-]+)\.([0-9A-Za-z-]+)*$"
 
-git fetch > /dev/null
-TAGS="$(git tag)"
-FIRST_VERSION="v0.0.0"
-IFS=$'\n' read -rd '' -a TAG_ARRAY <<<"$TAGS"
-
 # Global variables
+FIRST_VERSION="v0.0.0"
 finalversion=$FIRST_VERSION
 lastversion=$FIRST_VERSION
+hasversiontag="false"
 scope="patch"
 displayonly="false"
 forcedversion=
@@ -244,6 +241,12 @@ function get_latest {
       done
       ;;
   esac
+
+  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    hasversiontag="true"
+  else
+    hasversiontag="false"
+  fi
 }
 
 # Gets the next version given the provided scope
@@ -359,7 +362,7 @@ function increase_version {
   else
     check_git_dirty_status
     local __commitlist
-    if [ "$finalversion" == "$FIRST_VERSION" ]; then
+    if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
       __commitlist="$(git log --pretty=oneline | cat)"
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
@@ -499,7 +502,7 @@ function get_work_tree_status {
 }
 
 function get_current {
-  if git rev-parse -q --verify "refs/tags/$lastversion" >/dev/null; then
+  if [ "$hasversiontag" == "true" ]; then
     local __commitcount="$(git rev-list $lastversion.. --count)"
   else
     local __commitcount="$(git rev-list --count HEAD)"
@@ -543,8 +546,15 @@ function get_current {
   fi
 }
 
-get_latest ${TAG_ARRAY[@]}
-currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+function init {
+  git fetch > /dev/null
+  TAGS="$(git tag)"
+  IFS=$'\n' read -rd '' -a TAG_ARRAY <<<"$TAGS"
+
+  get_latest ${TAG_ARRAY[@]}
+  currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+}
+
 case $ACTION in
   --help)
     echo -e "$HELP"
@@ -553,6 +563,7 @@ case $ACTION in
     echo -e "${PROG}: $PROG_VERSION"
     ;;
   final)
+    init
     diff=$(git diff master | cat)
     if [ -n "$diff" ]; then
       echo "ERROR: Branch must be updated with master for final versions"
@@ -561,24 +572,30 @@ case $ACTION in
     increase_version
     ;;
   alpha|beta)
+    init
     identifier="$ACTION"
     increase_version
     ;;
   candidate)
+    init
     identifier="rc"
     increase_version
     ;;
   getlast)
+    init
     echo "$lastversion"
     ;;
   getfinal)
+    init
     echo "$finalversion"
     ;;
   getcurrent)
+    init
     get_current current
     echo "$current"
     ;;
   get)
+    init
     echo "Current final version: $finalversion"
     echo "Last tagged version:   $lastversion"
     ;;
