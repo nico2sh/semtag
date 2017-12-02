@@ -30,7 +30,7 @@ if ! git add semtag README.md ; then
 fi
 
 if ! git commit -m "Update readme and info to $nextversion" ; then
-  echo "Error commiting modified files with new version"
+  echo "Error committing modified files with new version"
   exit 1
 fi
 
