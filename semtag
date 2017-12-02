@@ -600,7 +600,7 @@ case $ACTION in
     echo "Last tagged version:   $lastversion"
     ;;
   *)
-    echo "No valid command $ACTION, see --help for available commands."
+    echo "'$ACTION' is not a valid command, see --help for available commands."
     ;;
 esac
 
