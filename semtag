@@ -13,6 +13,7 @@ lastversion=$FIRST_VERSION
 hasversiontag="false"
 scope="patch"
 displayonly="false"
+forcetag="false"
 forcedversion=
 versionname=
 identifier=
@@ -60,7 +61,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:o" opt; do
+while getopts "v:s:o:f" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -70,6 +71,9 @@ while getopts "v:s:o" opt; do
       ;;
     o)
       displayonly="true"
+      ;;
+    f)
+      forcetag="true"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -360,7 +364,9 @@ function increase_version {
   if [ "$displayonly" == "true" ]; then
     echo "$__version"
   else
-    check_git_dirty_status
+    if [ "$forcetag" == "false" ]; then
+      check_git_dirty_status
+    fi
     local __commitlist
     if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
       __commitlist="$(git log --pretty=oneline | cat)"
@@ -565,9 +571,11 @@ case $ACTION in
   final)
     init
     diff=$(git diff master | cat)
-    if [ -n "$diff" ]; then
-      echo "ERROR: Branch must be updated with master for final versions"
-      exit 1
+    if [ "$forcetag" == "false" ]; then
+      if [ -n "$diff" ]; then
+        echo "ERROR: Branch must be updated with master for final versions"
+        exit 1
+      fi
     fi
     increase_version
     ;;
