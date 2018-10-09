@@ -420,11 +420,13 @@ function check_git_dirty_status {
 
   if [ "$__repostatus" == "uncommitted" ]; then
     echo "ERROR: You have uncommitted changes"
+    git status --porcelain
     exit 1
   fi
 
   if [ "$__repostatus" == "unstaged" ]; then
     echo "ERROR: You have unstaged changes"
+    git status --porcelain
     exit 1
   fi
 }
