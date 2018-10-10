@@ -37,7 +37,10 @@ Options:
                Setting the scope as 'auto', the script will chose the scope between
                'minor' and 'patch', depending on the amount of lines added (<10% will
                choose patch).
+  -v         Specifies manually the version to be tagged, must be a valid semantic version
+               in the format X.Y.Z where X, Y and Z are positive integers.
   -o         Output the version only, shows the bumped version, but doesn't tag.
+  -f         Forces to tag, even if there are unstaged or uncommited changes.
 Commands:
   --help     Print this help message.
   --version  Prints the program's version.
