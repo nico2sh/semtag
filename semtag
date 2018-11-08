@@ -297,7 +297,7 @@ function bump_version {
     # Last version is not final
     local __idlast
     explode_identifier ${__explodedlast[3]} __idlast
-    
+
     # We get the last, given the desired id based on the scope
     __candidatefromlast="v${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
     if [[ -n "$identifier" ]]; then
@@ -376,7 +376,7 @@ function increase_version {
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
     fi
-    
+
     if [[ -z $__commitlist ]]; then
       echo "No commits since the last final version, not bumping version"
     else
@@ -398,18 +398,20 @@ $__commitlist"
         git config user.email "$__username@$__useremail"
       fi
 
-      git tag -a $__version -m "$__message" 
+      git tag -a $__version -m "$__message"
 
       # If we have a remote, we push there
-      local __remote=$(git remote)
-      if [[ -n $__remote ]]; then
-        git push $__remote $__version > /dev/null
-        if [ $? -eq 0 ]; then
-          echo "$__version"
-        else
-          echo "Error pushing the tag $__version to $__remote"
-          exit 1
-        fi
+      local __remotes=$(git remote)
+      if [[ -n $__remotes ]]; then
+        for __remote in $__remotes; do
+          git push $__remote $__version > /dev/null
+          if [ $? -eq 0 ]; then
+            echo "$__version pushed to $__remote"
+          else
+            echo "Error pushing the tag $__version to $__remote"
+            exit 1
+          fi
+        done
       else
         echo "$__version"
       fi
@@ -520,7 +522,7 @@ function get_current {
   fi
   local __status=
   get_work_tree_status __status
-  
+
   if [ "$__commitcount" == "0" ] && [ -z "$__status" ]; then
     eval "$1=$lastversion"
   else
@@ -616,4 +618,3 @@ case $ACTION in
     echo "'$ACTION' is not a valid command, see --help for available commands."
     ;;
 esac
-
