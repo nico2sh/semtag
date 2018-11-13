@@ -132,3 +132,6 @@ Last tagged version:   v1.1.1-beta.1
 
 Now the patch has been bumped, since a beta version is considered to be lower than a release candidate, so is the verison number that bumps up, using the provided scope (`patch` in this case).
 
+### Forcing a tag
+
+Semtag doesn't tag if there are no new commits since the last version, or if there are unstaged changes. To force to tag, use the `-f` flag, then it will bump no matter if there are unstaged changes or no new commits.
