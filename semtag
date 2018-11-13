@@ -378,7 +378,7 @@ function increase_version {
     fi
 
     # If we are forcing a bump, we add bump to the commit list
-    if [ -z $__commitlist ] && [ "$forcetag" == "true" ]; then
+    if [[ -z $__commitlist && "$forcetag" == "true" ]]; then
       __commitlist="bump"
     fi
 
