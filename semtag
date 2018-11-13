@@ -64,7 +64,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:o:f" opt; do
+while getopts "v:s:of" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
