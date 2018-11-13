@@ -376,7 +376,12 @@ function increase_version {
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
     fi
-    
+
+    # If we are forcing a bump, we add bump to the commit list
+    if [ -z $__commitlist ] && [ "$forcetag" == "true" ]; then
+      __commitlist="bump"
+    fi
+
     if [[ -z $__commitlist ]]; then
       echo "No commits since the last final version, not bumping version"
     else
