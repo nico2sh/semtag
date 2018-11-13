@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PROG=semtag
-PROG_VERSION="v0.0.13"
+PROG_VERSION="v0.1.0"
 
 SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
 IDENTIFIER_REGEX="^\-([0-9A-Za-z-]+)\.([0-9A-Za-z-]+)*$"
