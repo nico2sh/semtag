@@ -30,7 +30,7 @@ Starts from version `0.0.0`, so the first time you initialize a version, it will
 Use the script as follows:
 
 ```
-$ semtag <commdand> <options>
+$ semtag <command> <options>
 ```
 
 Info commands:
@@ -87,7 +87,7 @@ def tagFinalVersion() {
     commandLine "$rootProject.projectDir/semtag", "final", "-s minor"
     standardOutput = hashStdOut
   }
-  
+
   doLast {
     project.version=getVersionTag()
   }
@@ -135,3 +135,7 @@ Now the patch has been bumped, since a beta version is considered to be lower th
 ### Forcing a tag
 
 Semtag doesn't tag if there are no new commits since the last version, or if there are unstaged changes. To force to tag, use the `-f` flag, then it will bump no matter if there are unstaged changes or no new commits.
+
+### Version prefix
+
+By default, semtag prefixes new versions with `v`. Use the `-p <prefix>` flag which to change the prefix. Use `-p ''` to remove the prefix. If you use a different prefix you must ensure that you specify the prefix to all invocations to semtag.

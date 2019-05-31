@@ -14,6 +14,7 @@ hasversiontag="false"
 scope="patch"
 displayonly="false"
 forcetag="false"
+prefix="v"
 forcedversion=
 versionname=
 identifier=
@@ -41,6 +42,7 @@ Options:
                in the format X.Y.Z where X, Y and Z are positive integers.
   -o         Output the version only, shows the bumped version, but doesn't tag.
   -f         Forces to tag, even if there are unstaged or uncommited changes.
+  -p         Change the prefix used in the version tag (defaults to 'v')
 Commands:
   --help     Print this help message.
   --version  Prints the program's version.
@@ -64,7 +66,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:of" opt; do
+while getopts "v:s:ofp:" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -77,6 +79,11 @@ while getopts "v:s:of" opt; do
       ;;
     f)
       forcetag="true"
+      ;;
+    p)
+      prefix="$OPTARG"
+      SEMVER_REGEX="^${prefix}?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
+      FIRST_VERSION="${prefix}0.0.0"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -127,7 +134,7 @@ function compare_versions {
   for i in 0 1 2; do
     local __numberfirst=${__first[$i]}
     local __numbersecond=${__second[$i]}
-    case $(($__numberfirst - $__numbersecond)) in
+    case $((__numberfirst - __numbersecond)) in
       0)
         ;;
       -[0-9]*)
@@ -281,7 +288,7 @@ function get_next_version {
     ;;
   esac
 
-  eval "$__result=v${__exploded[0]}.${__exploded[1]}.${__exploded[2]}"
+  eval "$__result=${prefix}${__exploded[0]}.${__exploded[1]}.${__exploded[2]}"
 }
 
 function bump_version {
@@ -297,9 +304,9 @@ function bump_version {
     # Last version is not final
     local __idlast
     explode_identifier ${__explodedlast[3]} __idlast
-    
+
     # We get the last, given the desired id based on the scope
-    __candidatefromlast="v${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
+    __candidatefromlast="${prefix}${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
     if [[ -n "$identifier" ]]; then
       local __nextid="$identifier.1"
       if [ "$identifier" == "${__idlast[0]}" ]; then
