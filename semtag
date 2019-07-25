@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 PROG=semtag
-PROG_VERSION="v0.0.9"
+PROG_VERSION="v0.1.0"
 
 SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
 IDENTIFIER_REGEX="^\-([0-9A-Za-z-]+)\.([0-9A-Za-z-]+)*$"
@@ -64,7 +64,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:o:f" opt; do
+while getopts "v:s:of" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -375,6 +375,11 @@ function increase_version {
       __commitlist="$(git log --pretty=oneline | cat)"
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
+    fi
+
+    # If we are forcing a bump, we add bump to the commit list
+    if [[ -z $__commitlist && "$forcetag" == "true" ]]; then
+      __commitlist="bump"
     fi
 
     if [[ -z $__commitlist ]]; then

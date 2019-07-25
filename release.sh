@@ -10,7 +10,7 @@ echo "Using scope $SCOPE"
 
 # We get the next version, without tagging
 echo "Getting next version"
-nextversion="$(source semtag final -os $SCOPE)"
+nextversion="$(source semtag final -fos $SCOPE)"
 echo "Publishing with version: $nextversion"
 
 # We replace the placeholder in the source with the new version
@@ -40,4 +40,4 @@ if ! git push ; then
 fi
 
 # We update the tag with the new version
-source semtag final -v $nextversion
+source semtag final -f -v $nextversion
