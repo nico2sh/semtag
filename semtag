@@ -124,15 +124,15 @@ function explode_version {
 function compare_versions {
   local __first
   local __second
-  explode_version $1 __first
-  explode_version $2 __second
-  local lv=$3
+  explode_version "$1" __first
+  explode_version "$2" __second
+  local lv="$3"
 
   # Compares MAJOR, MINOR and PATCH
   for i in 0 1 2; do
     local __numberfirst=${__first[$i]}
     local __numbersecond=${__second[$i]}
-    case $(($__numberfirst - $__numbersecond)) in
+    case $((__numberfirst - __numbersecond)) in
       0)
         ;;
       -[0-9]*)
@@ -149,18 +149,18 @@ function compare_versions {
   # Identifiers should compare with the ASCII order.
   local __identifierfirst=${__first[3]}
   local __identifiersecond=${__second[3]}
-  if [[ -n "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
-    if [[ "$__identifierfirst" > "$__identifiersecond" ]]; then
+  if [[ -n $__identifierfirst && -n $__identifiersecond ]]; then
+    if [[ $__identifierfirst > $__identifiersecond ]]; then
       eval "$lv=1"
       return 0
-    elif [[ "$__identifierfirst" < "$__identifiersecond" ]]; then
+    elif [[ $__identifierfirst < $__identifiersecond ]]; then
       eval "$lv=-1"
       return 0
     fi
-  elif [[ -z "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
+  elif [[ -z $__identifierfirst && -n $__identifiersecond ]]; then
     eval "$lv=1"
     return 0
-  elif [[ -n "$__identifierfirst" ]] && [[ -z "$__identifiersecond" ]]; then
+  elif [[ -n $__identifierfirst && -z $__identifiersecond ]]; then
     eval "$lv=-1"
     return 0
   fi
@@ -177,7 +177,7 @@ function get_latest_of_two {
   local __second=$2
   local __result
   local __latest=$3
-  compare_versions $__first $__second __result
+  compare_versions "$__first" "$__second" __result
   case $__result in
     0)
       eval "$__latest=$__second"
@@ -200,7 +200,7 @@ function explode_identifier {
   if [[ $__identifier =~ $IDENTIFIER_REGEX ]] ; then
     local __id=${BASH_REMATCH[1]}
     local __number=${BASH_REMATCH[2]}
-    if [[ -z "$__number" ]]; then
+    if [[ -z $__number ]]; then
       __number=1
     fi
     eval "$__result=(\"$__id\" \"$__number\")"
@@ -216,6 +216,7 @@ function get_latest {
   local __taglist=("$@")
   local __tagsnumber=${#__taglist[@]}
   local __current
+  local ver
   case $__tagsnumber in
     0)
       finalversion=$FIRST_VERSION
@@ -223,9 +224,9 @@ function get_latest {
       ;;
     1)
       __current=${__taglist[0]}
-      explode_version $__current ver
-      if [ -n "$ver" ]; then
-        if [ -n "${ver[3]}" ]; then
+      explode_version "$__current" ver
+      if [[ -n $ver ]]; then
+        if [[ -n ${ver[3]} ]]; then
           finalversion=$FIRST_VERSION
         else
           finalversion=$__current
@@ -237,17 +238,17 @@ function get_latest {
       fi
       ;;
     *)
-      local __lastpos=$(($__tagsnumber-1))
+      local __lastpos=$((__tagsnumber-1))
       for i in $(seq 0 $__lastpos)
       do
         __current=${__taglist[i]}
-        explode_version ${__taglist[i]} ver
-        if [ -n "$ver" ]; then
-          if [ -z "${ver[3]}" ]; then
-            get_latest_of_two $finalversion $__current finalversion
+        explode_version "${__taglist[i]}" ver
+        if [[ -n $ver ]]; then
+          if [[ -z ${ver[3]} ]]; then
+            get_latest_of_two $finalversion "$__current" finalversion
             get_latest_of_two $lastversion $finalversion lastversion
           else
-            get_latest_of_two $lastversion $__current lastversion
+            get_latest_of_two $lastversion "$__current" lastversion
           fi
         fi
       done
@@ -270,19 +271,19 @@ function get_next_version {
   local __fromversion=$1
   local __scope=$2
   local __result=$3
-  explode_version $__fromversion __exploded
+  explode_version "$__fromversion" __exploded
   case $__scope in
     major)
-      __exploded[0]=$((${__exploded[0]}+1))
+      __exploded[0]=$((__exploded[0]+1))
       __exploded[1]=0
       __exploded[2]=0
     ;;
     minor)
-      __exploded[1]=$((${__exploded[1]}+1))
+      __exploded[1]=$((__exploded[1]+1))
       __exploded[2]=0
     ;;
     patch)
-      __exploded[2]=$((${__exploded[2]}+1))
+      __exploded[2]=$((__exploded[2]+1))
     ;;
   esac
 
@@ -291,33 +292,33 @@ function get_next_version {
 
 function bump_version {
   ## First we try to get the next version based on the existing last one
-  if [ "$scope" == "auto" ]; then
+  if [[ $scope == "auto" ]]; then
     get_scope_auto scope
   fi
 
   local __candidatefromlast=$FIRST_VERSION
   local __explodedlast
   explode_version $lastversion __explodedlast
-  if [[ -n "${__explodedlast[3]}" ]]; then
+  if [[ -n ${__explodedlast[3]} ]]; then
     # Last version is not final
     local __idlast
-    explode_identifier ${__explodedlast[3]} __idlast
 
+    explode_identifier "${__explodedlast[3]}" __idlast
     # We get the last, given the desired id based on the scope
     __candidatefromlast="${prefix}${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
     if [[ -n "$identifier" ]]; then
       local __nextid="$identifier.1"
-      if [ "$identifier" == "${__idlast[0]}" ]; then
+      if [[ $identifier == "${__idlast[0]}" ]]; then
         # We target the same identifier as the last so we increase one
-        __nextid="$identifier.$(( ${__idlast[1]}+1 ))"
+        __nextid="$identifier.$(( __idlast[1]+1 ))"
         __candidatefromlast="$__candidatefromlast-$__nextid"
       else
         # Different identifiers, we make sure we are assigning a higher identifier, if not, we increase the version
         __candidatefromlast="$__candidatefromlast-$__nextid"
         local __comparedwithlast
-        compare_versions $__candidatefromlast $lastversion __comparedwithlast
-        if [ "$__comparedwithlast" == -1 ]; then
-          get_next_version $__candidatefromlast $scope __candidatefromlast
+        compare_versions "$__candidatefromlast" $lastversion __comparedwithlast
+        if [[ $__comparedwithlast == "-1" ]]; then
+          get_next_version "$__candidatefromlast" "$scope" __candidatefromlast
           __candidatefromlast="$__candidatefromlast-$__nextid"
         fi
       fi
@@ -326,15 +327,15 @@ function bump_version {
 
   # Then we try to get the version based on the latest final one
   local __candidatefromfinal=$FIRST_VERSION
-  get_next_version $finalversion $scope __candidatefromfinal
-  if [[ -n "$identifier" ]]; then
+  get_next_version $finalversion "$scope" __candidatefromfinal
+  if [[ -n $identifier ]]; then
     __candidatefromfinal="$__candidatefromfinal-$identifier.1"
   fi
 
   # Finally we compare both candidates
   local __resultversion
   local __result
-  compare_versions $__candidatefromlast $__candidatefromfinal __result
+  compare_versions "$__candidatefromlast" $__candidatefromfinal __result
   case $__result in
     0)
       __resultversion=$__candidatefromlast
@@ -353,12 +354,12 @@ function bump_version {
 function increase_version {
   local __version=
 
-  if [ -z $forcedversion ]; then
+  if [[ -z $forcedversion ]]; then
     bump_version __version
   else
     if [[ $forcedversion =~ $SEMVER_REGEX ]] ; then
-      compare_versions $forcedversion $lastversion __result
-      if [ $__result -le 0 ]; then
+      compare_versions "$forcedversion" $lastversion __result
+      if [[ $__result -le 0 ]]; then
         echo "Version can't be lower than last version: $lastversion"
         exit 1
       fi
@@ -369,21 +370,21 @@ function increase_version {
     __version=$forcedversion
   fi
 
-  if [ "$displayonly" == "true" ]; then
+  if [[ $displayonly == "true" ]]; then
     echo "$__version"
   else
-    if [ "$forcetag" == "false" ]; then
+    if [[ $forcetag == "false" ]]; then
       check_git_dirty_status
     fi
     local __commitlist
-    if [ "$finalversion" == "$FIRST_VERSION" ] || [ "$hasversiontag" != "true" ]; then
+    if [[ $finalversion == "$FIRST_VERSION" || $hasversiontag != "true" ]]; then
       __commitlist="$(git log --pretty=oneline | cat)"
     else
       __commitlist="$(git log --pretty=oneline $finalversion... | cat)"
     fi
 
     # If we are forcing a bump, we add bump to the commit list
-    if [[ -z $__commitlist && "$forcetag" == "true" ]]; then
+    if [[ -z $__commitlist && $forcetag == "true" ]]; then
       __commitlist="bump"
     fi
 
@@ -397,13 +398,15 @@ function increase_version {
 $__commitlist"
 
       # We check we have info on the user
-      local __username=$(git config user.name)
-      if [ -z "$__username" ]; then
+      local __username
+      __username=$(git config user.name)
+      if [[ -z $__username ]]; then
         __username=$(id -u -n)
-        git config user.name $__username
+        git config user.name "$__username"
       fi
-      local __useremail=$(git config user.email)
-      if [ -z "$__useremail" ]; then
+      local __useremail
+      __useremail=$(git config user.email)
+      if [[ -z $__useremail ]]; then
         __useremail=$(hostname)
         git config user.email "$__username@$__useremail"
       fi
@@ -414,7 +417,7 @@ $__commitlist"
       local __remotes=$(git remote)
       if [[ -n $__remotes ]]; then
         for __remote in $__remotes; do
-          git push $__remote $__version > /dev/null
+          git push "$__remote" "$__version" > /dev/null
           if [ $? -eq 0 ]; then
             echo "$__version pushed to $__remote"
           else
@@ -422,6 +425,7 @@ $__commitlist"
             exit 1
           fi
         done
+
       else
         echo "$__version"
       fi
@@ -433,13 +437,13 @@ function check_git_dirty_status {
   local __repostatus=
   get_work_tree_status __repostatus
 
-  if [ "$__repostatus" == "uncommitted" ]; then
+  if [[ $__repostatus == "uncommitted" ]]; then
     echo "ERROR: You have uncommitted changes"
     git status --porcelain
     exit 1
   fi
 
-  if [ "$__repostatus" == "unstaged" ]; then
+  if [[ $__repostatus == "unstaged" ]]; then
     echo "ERROR: You have unstaged changes"
     git status --porcelain
     exit 1
@@ -448,18 +452,21 @@ function check_git_dirty_status {
 
 # Get the total amount of lines of code in the repo
 function get_total_lines {
-  local __empty_id="$(git hash-object -t tree /dev/null)"
-  local __changes="$(git diff --numstat $__empty_id | cat)"
+  local __empty_id
+  __empty_id="$(git hash-object -t tree /dev/null)"
+  local __changes
+  __changes="$(git diff --numstat "$__empty_id" | cat)"
   local __added_deleted=$1
-  get_changed_lines "$__changes" $__added_deleted
+  get_changed_lines "$__changes" "$__added_deleted"
 }
 
 # Get the total amount of lines of code since the provided tag
 function get_sincetag_lines {
   local __sincetag=$1
-  local __changes="$(git diff --numstat $__sincetag | cat)"
+  local __changes
+  __changes="$(git diff --numstat "$__sincetag" | cat)"
   local __added_deleted=$2
-  get_changed_lines "$__changes" $__added_deleted
+  get_changed_lines "$__changes" "$__added_deleted"
 }
 
 function get_changed_lines {
@@ -475,8 +482,8 @@ function get_changed_lines {
     if [[ $i =~ $__diff_regex ]] ; then
       local __added=${BASH_REMATCH[1]}
       local __deleted=${BASH_REMATCH[2]}
-      __total_added=$(( $__total_added+$__added ))
-      __total_deleted=$(( $__total_deleted+$__deleted ))
+      __total_added=$(( __total_added+__added ))
+      __total_deleted=$(( __total_deleted+__deleted ))
     fi
   done
   eval "$2=( $__total_added $__total_deleted )"
@@ -492,9 +499,9 @@ function get_scope_auto {
   get_sincetag_lines $finalversion __since
 
   local __percentage=0
-  if [ "$__total" != "0" ]; then
-    local __percentage=$(( 100*$__since/$__total ))
-    if [ $__percentage -gt "10" ]; then
+  if [[ $__total != 0 ]]; then
+    local __percentage=$(( 100*__since/__total ))
+    if [[ $__percentage -gt 10 ]]; then
       __scope="minor"
     else
       __scope="patch"
@@ -502,7 +509,7 @@ function get_scope_auto {
   fi
 
   eval "$1=$__scope"
-  if [[ -n "$__verbose" ]]; then
+  if [[ -n $__verbose ]]; then
     echo "[Auto Scope] Percentage of lines changed: $__percentage"
     echo "[Auto Scope] : $__scope"
   fi
@@ -525,39 +532,43 @@ function get_work_tree_status {
 }
 
 function get_current {
-  if [ "$hasversiontag" == "true" ]; then
-    local __commitcount="$(git rev-list $lastversion.. --count)"
+  local __commitcount
+  if [[ $hasversiontag == "true" ]]; then
+    __commitcount="$(git rev-list $lastversion.. --count)"
   else
-    local __commitcount="$(git rev-list --count HEAD)"
+    __commitcount="$(git rev-list --count HEAD)"
   fi
   local __status=
   get_work_tree_status __status
 
   if [ "$__commitcount" == "0" ] && [ -z "$__status" ]; then
+
     eval "$1=$lastversion"
   else
-    local __buildinfo="$(git rev-parse --short HEAD)"
-    local __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
-    if [ "$__currentbranch" != "master" ]; then
+    local __buildinfo
+    __buildinfo="$(git rev-parse --short HEAD)"
+    local __currentbranch
+    __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+    if [[ $__currentbranch != "master" ]]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
 
     local __suffix=
-    if [ "$__commitcount" != "0" ]; then
-      if [ -n "$__suffix" ]; then
+    if [[ $__commitcount != "0" ]]; then
+      if [[ -n $__suffix ]]; then
         __suffix="$__suffix."
       fi
       __suffix="$__suffix$__commitcount"
     fi
-    if [ -n "$__status" ]; then
-      if [ -n "$__suffix" ]; then
+    if [[ -n $__status ]]; then
+      if [[ -n $__suffix ]]; then
         __suffix="$__suffix."
       fi
       __suffix="$__suffix$__status"
     fi
 
     __suffix="$__suffix+$__buildinfo"
-    if [ "$lastversion" == "$finalversion" ]; then
+    if [[ $lastversion == "$finalversion" ]]; then
       scope="patch"
       identifier=
       local __bumped=
@@ -574,8 +585,8 @@ function init {
   TAGS="$(git tag)"
   IFS=$'\n' read -rd '' -a TAG_ARRAY <<<"$TAGS"
 
-  get_latest ${TAG_ARRAY[@]}
-  currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+  get_latest "${TAG_ARRAY[@]}"
+  current="$(git rev-parse --abbrev-ref HEAD)"
 }
 
 case $ACTION in
@@ -588,8 +599,8 @@ case $ACTION in
   final)
     init
     diff=$(git diff master | cat)
-    if [ "$forcetag" == "false" ]; then
-      if [ -n "$diff" ]; then
+    if [[ $forcetag == "false" ]]; then
+      if [[ -n $diff ]]; then
         echo "ERROR: Branch must be updated with master for final versions"
         exit 1
       fi
