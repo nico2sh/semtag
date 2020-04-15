@@ -135,3 +135,7 @@ Now the patch has been bumped, since a beta version is considered to be lower th
 ### Forcing a tag
 
 Semtag doesn't tag if there are no new commits since the last version, or if there are unstaged changes. To force to tag, use the `-f` flag, then it will bump no matter if there are unstaged changes or no new commits.
+
+### Version prefix
+
+By default, semtag prefixes new versions with `v`. Use the `-p` (plain) flag which to create new versions with no `v` prefix.

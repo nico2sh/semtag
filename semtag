@@ -14,6 +14,7 @@ hasversiontag="false"
 scope="patch"
 displayonly="false"
 forcetag="false"
+prefix="v"
 forcedversion=
 versionname=
 identifier=
@@ -41,6 +42,7 @@ Options:
                in the format X.Y.Z where X, Y and Z are positive integers.
   -o         Output the version only, shows the bumped version, but doesn't tag.
   -f         Forces to tag, even if there are unstaged or uncommited changes.
+  -p         Use a plain version, ie. do not prefix with 'v'.
 Commands:
   --help     Print this help message.
   --version  Prints the program's version.
@@ -64,7 +66,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:of" opt; do
+while getopts "v:s:ofp" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -77,6 +79,9 @@ while getopts "v:s:of" opt; do
       ;;
     f)
       forcetag="true"
+      ;;
+    p)
+      prefix=""
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -281,7 +286,7 @@ function get_next_version {
     ;;
   esac
 
-  eval "$__result=v${__exploded[0]}.${__exploded[1]}.${__exploded[2]}"
+  eval "$__result=${prefix}${__exploded[0]}.${__exploded[1]}.${__exploded[2]}"
 }
 
 function bump_version {
@@ -299,7 +304,7 @@ function bump_version {
     explode_identifier ${__explodedlast[3]} __idlast
 
     # We get the last, given the desired id based on the scope
-    __candidatefromlast="v${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
+    __candidatefromlast="${prefix}${__explodedlast[0]}.${__explodedlast[1]}.${__explodedlast[2]}"
     if [[ -n "$identifier" ]]; then
       local __nextid="$identifier.1"
       if [ "$identifier" == "${__idlast[0]}" ]; then
