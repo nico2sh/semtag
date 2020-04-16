@@ -7,6 +7,7 @@ SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-
 IDENTIFIER_REGEX="^\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$"
 NUMERIC_REGEX='^[0-9]+$'
 
+
 # Global variables
 FIRST_VERSION="v0.0.0"
 finalversion=$FIRST_VERSION
@@ -19,6 +20,7 @@ prefix="v"
 forcedversion=
 versionname=
 identifier=
+buildformat=":b.:c"
 
 HELP="\
 Usage:
@@ -44,6 +46,11 @@ Options:
   -o         Output the version only, shows the bumped version, but doesn't tag.
   -f         Forces to tag, even if there are unstaged or uncommited changes.
   -p         Use a plain version, ie. do not prefix with 'v'.
+  -b         Override the default build format ':b.:c' when appending build information to the version.
+               :b - current branch
+               :c - current commit short format
+               :d - date yymmdd format
+              
 Commands:
   --help     Print this help message.
   --version  Prints the program's version.
@@ -59,7 +66,8 @@ Commands:
   alpha      Tags the current build as an alpha version, the tag will contain all
                the commits from the last final version.
   beta       Tags the current build as a beta version, the tag will contain all
-               the commits from the last final version."
+               the commits from the last final version.
+  build      Tags the current build with the last version appending build information."
 
 # Commands and options
 ACTION="getlast"
@@ -67,7 +75,7 @@ ACTION="$1"
 shift
 
 # We get the parameters
-while getopts "v:s:ofp" opt; do
+while getopts "v:s:ofpb:" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -83,6 +91,9 @@ while getopts "v:s:ofp" opt; do
       ;;
     p)
       prefix=""
+      ;;
+    b)
+      buildformat="$OPTARG"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -441,8 +452,12 @@ function increase_version {
   else
     if [[ $forcedversion =~ $SEMVER_REGEX ]] ; then
       compare_versions "$forcedversion" $lastversion __result
-      if [[ $__result -le 0 ]]; then
+      if [[ "$__result" < 0 ]]; then
         echo "Version can't be lower than last version: $lastversion"
+        exit 1
+      fi
+      if [[ -n $(git tag -l "$forcedversion") ]] ; then
+        echo "Version already tagged in repo: $forcedversion"
         exit 1
       fi
     else
@@ -613,6 +628,42 @@ function get_work_tree_status {
   fi
 }
 
+function string_replace {
+   STRING="$1"
+   MATCH="$2"
+   REPLACE="$3"
+
+   echo "$STRING" | sed "s/$MATCH/$REPLACE/g"
+}
+
+function strip_build {
+  echo $(string_replace "$1" "\\+[0-9A-Za-z\.-]\+" "")
+}
+
+function create_build_string {
+  local __buildstring=$1
+  
+  if [[ -z "$__buildstring" ]] ; then
+    __buildstring="$buildformat"
+  fi
+  
+  if [[ "$__buildstring" =~ ":c" ]] ; then
+    commitnumber="$(git rev-parse --short HEAD)"
+  fi
+  if [[ "$__buildstring" =~ ":b" ]] ; then
+    branchname="$(git rev-parse --abbrev-ref HEAD)"
+  fi
+  if [[ "$__buildstring" =~ ":d" ]] ; then
+    dateymd="$(date +"%Y%m%d")"
+  fi
+  
+  __buildstring=$(string_replace "$__buildstring" ":c" "$commitnumber")
+  __buildstring=$(string_replace "$__buildstring" ":b" "$branchname")
+  __buildstring=$(string_replace "$__buildstring" ":d" "$dateymd")
+  
+  echo $__buildstring
+}
+
 function get_current {
   local __commitcount
   if [[ $hasversiontag == "true" ]]; then
@@ -624,16 +675,14 @@ function get_current {
   get_work_tree_status __status
 
   if [ "$__commitcount" == "0" ] && [ -z "$__status" ]; then
-
     eval "$1=$lastversion"
   else
     local __buildinfo
-    __buildinfo="$(git rev-parse --short HEAD)"
-    local __currentbranch
-    __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+    __buildinfo=":c"
     if [[ $__currentbranch != "master" ]]; then
-      __buildinfo="$__currentbranch.$__buildinfo"
+      __buildinfo=":b.:c"
     fi
+    __buildinfo=$(create_build_string "$__buildinfo")
 
     local __suffix=
     if [[ $__commitcount != "0" ]]; then
@@ -692,6 +741,12 @@ case $ACTION in
   alpha|beta)
     init
     identifier="$ACTION"
+    increase_version
+    ;;
+  build)
+    init
+    strippedlastversion=$(strip_build "$lastversion")
+    forcedversion="$strippedlastversion+$(create_build_string)"
     increase_version
     ;;
   candidate)
