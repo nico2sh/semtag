@@ -149,13 +149,32 @@ function compare_versions {
   # Identifiers should compare with the ASCII order.
   local __identifierfirst=${__first[3]}
   local __identifiersecond=${__second[3]}
-  if [[ -n $__identifierfirst && -n $__identifiersecond ]]; then
-    if [[ $__identifierfirst > $__identifiersecond ]]; then
+  if [[ -n "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
+    explode_identifier "${__first[3]}" __explodedidentifierfirst
+    explode_identifier "${__second[3]}" __explodedidentifiersecond
+    if [[ "${__explodedidentifierfirst[0]}" > "${__explodedidentifiersecond[0]}" ]]; then
       eval "$lv=1"
       return 0
-    elif [[ $__identifierfirst < $__identifiersecond ]]; then
+    elif [[ "${__explodedidentifierfirst[0]}" < "${__explodedidentifiersecond[0]}" ]]; then
       eval "$lv=-1"
       return 0
+    else 
+      #identifers are equal, test their numerical subparts
+      if [[ -n "$__explodedidentifierfirst[1]" ]] && [[ -n "$__explodedidentifiersecond[1]" ]]; then
+        if (( "${__explodedidentifierfirst[1]}" > "${__explodedidentifiersecond[1]}" )); then
+          eval "$lv=1"
+          return 0
+        elif (( "${__explodedidentifierfirst[1]}" < "${__explodedidentifiersecond[1]}" )); then
+          eval "$lv=-1"
+          return 0
+        fi
+      elif [[ -z "$__explodedidentifierfirst[1]" ]] && [[ -n "$__explodedidentifiersecond[1]" ]]; then
+        eval "$lv=1"
+        return 0
+      elif [[ -n "$__explodedidentifierfirst[1]" ]] && [[ -z "$__explodedidentifiersecond[1]" ]]; then
+        eval "$lv=-1"
+        return 0
+      fi
     fi
   elif [[ -z $__identifierfirst && -n $__identifiersecond ]]; then
     eval "$lv=1"
