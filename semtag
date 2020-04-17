@@ -269,6 +269,8 @@ function compare_identifiers {
     eval "$__result=-1"
     return 0
   fi
+
+  eval "$__result=0"
 }
 
 # Assigns a 2 size array with the identifier, having the identifier at pos 0, and the number in pos 1
