@@ -248,7 +248,7 @@ function compare_identifiers {
     firstsize=${#explodedidentifierfirst[@]}    
     secondsize=${#explodedidentifiersecond[@]}
     minlength=$(( $firstsize<$secondsize ? $firstsize : $secondsize ))
-    for (( i = 1 ; i < $minlength ; i++ )); do
+    for (( i = 0 ; i < $minlength ; i++ )); do
       compare_identifier_part "${explodedidentifierfirst[$i]}" "${explodedidentifiersecond[$i]}" partresult
       case $partresult in 
         0)
