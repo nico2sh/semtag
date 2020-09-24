@@ -4,7 +4,8 @@ PROG=semtag
 PROG_VERSION="v0.1.0"
 
 SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
-IDENTIFIER_REGEX="^\-([0-9A-Za-z-]+)\.([0-9A-Za-z-]+)*$"
+IDENTIFIER_REGEX="^\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$"
+NUMERIC_REGEX='^[0-9]+$'
 
 # Global variables
 FIRST_VERSION="v0.0.0"
@@ -144,23 +145,45 @@ function compare_versions {
   # Identifiers should compare with the ASCII order.
   local __identifierfirst=${__first[3]}
   local __identifiersecond=${__second[3]}
-  if [[ -n "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
-    if [[ "$__identifierfirst" > "$__identifiersecond" ]]; then
-      eval "$lv=1"
-      return 0
-    elif [[ "$__identifierfirst" < "$__identifiersecond" ]]; then
-      eval "$lv=-1"
-      return 0
-    fi
-  elif [[ -z "$__identifierfirst" ]] && [[ -n "$__identifiersecond" ]]; then
-    eval "$lv=1"
-    return 0
-  elif [[ -n "$__identifierfirst" ]] && [[ -z "$__identifiersecond" ]]; then
-    eval "$lv=-1"
-    return 0
-  fi
+  compare_identifiers "${__first[3]}" "${__second[3]}" compareresult
+  eval "$lv=$compareresult"
+}
 
-  eval "$lv=0"
+
+# Returns the number comparison
+# $1 The first number to compare
+# $2 The second number to compare
+# $3 The variable where to store the result
+function compare_numeric {
+  local __first=$1
+  local __second=$2
+  local __result=$3
+  
+  if (( "$__first" < "$__second" )) ; then
+    eval "$__result=-1"
+  elif (( "$__first" > "$__second" )) ; then
+    eval "$__result=1"
+  else
+    eval "$__result=0"
+  fi
+}
+
+# Returns the alpanumeric comparison
+# $1 The first alpanumeric to compare
+# $2 The second alpanumeric to compare
+# $3 The variable where to store the result
+function compare_alphanumeric {
+  local __first=$1
+  local __second=$2
+  local __result=$3
+  
+  if [[ "$__first" < "$__second" ]] ; then
+    eval "$__result=-1"
+  elif [[ "$__first" > "$__second" ]] ; then
+    eval "$__result=1"
+  else
+    eval "$__result=0"
+  fi
 }
 
 # Returns the last version of two
@@ -172,6 +195,7 @@ function get_latest_of_two {
   local __second=$2
   local __result
   local __latest=$3
+  
   compare_versions $__first $__second __result
   case $__result in
     0)
@@ -186,6 +210,69 @@ function get_latest_of_two {
   esac
 }
 
+# Returns comparison of two identifier parts
+# $1 The first part to compare
+# $2 The second part to compare
+# $3 The variable where to store the compare result
+function compare_identifier_part {
+  local __first=$1
+  local __second=$2
+  local __result=$3
+  local compareresult
+  
+  if [[ "$__first" =~ $NUMERIC_REGEX ]] && [[ "$__second" =~ $NUMERIC_REGEX ]] ; then
+    compare_numeric "$__first" "$__second" compareresult
+    eval "$__result=$compareresult"
+    return 0
+  fi
+  
+  
+  compare_alphanumeric "$__first" "$__second" compareresult
+  eval "$__result=$compareresult"
+}
+
+# Returns comparison of two identifiers
+# $1 The first identifier to compare
+# $2 The second identifier to compare
+# $3 The variable where to store the compare result
+function compare_identifiers {
+  local __first=$1
+  local __second=$2
+  local __result=$3
+  local partresult
+  local arraylengths
+  if [[ -n "$__first" ]] && [[ -n "$__second" ]]; then
+    explode_identifier "${__first}" explodedidentifierfirst
+    explode_identifier "${__second}" explodedidentifiersecond
+    
+    firstsize=${#explodedidentifierfirst[@]}    
+    secondsize=${#explodedidentifiersecond[@]}
+    minlength=$(( $firstsize<$secondsize ? $firstsize : $secondsize ))
+    for (( i = 0 ; i < $minlength ; i++ )); do
+      compare_identifier_part "${explodedidentifierfirst[$i]}" "${explodedidentifiersecond[$i]}" partresult
+      case $partresult in 
+        0)
+          ;;
+        *)
+          eval "$__result=$partresult"
+          return 0
+          ;;
+      esac
+    done
+    compare_numeric $firstsize $secondsize arraylengths
+    eval "$__result=$arraylengths"
+    return 0
+  elif [[ -z "$__first" ]] && [[ -n "$__second" ]]; then
+    eval "$__result=1"
+    return 0
+  elif [[ -n "$__first" ]] && [[ -z "$__second" ]]; then
+    eval "$__result=-1"
+    return 0
+  fi
+
+  eval "$__result=0"
+}
+
 # Assigns a 2 size array with the identifier, having the identifier at pos 0, and the number in pos 1
 # $1 The identifier in the format -id.#
 # $2 The vferiable where to store the 2 size array
@@ -193,12 +280,8 @@ function explode_identifier {
   local __identifier=$1
   local __result=$2
   if [[ $__identifier =~ $IDENTIFIER_REGEX ]] ; then
-    local __id=${BASH_REMATCH[1]}
-    local __number=${BASH_REMATCH[2]}
-    if [[ -z "$__number" ]]; then
-      __number=1
-    fi
-    eval "$__result=(\"$__id\" \"$__number\")"
+    IFS='-.' read -ra identifierparts <<< $__identifier
+    eval "$__result=( ${identifierparts[@]} )"
   else
     eval "$__result="
   fi
