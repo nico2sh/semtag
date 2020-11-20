@@ -30,7 +30,7 @@ Usage:
 Options:
   -s         The scope that must be increased, can be major, minor or patch.
                The resulting version will match X.Y.Z(-PRERELEASE)(+BUILD)
-               where X, Y and Z are positive integers, PRERELEASE is an optionnal
+               where X, Y and Z are positive integers, PRERELEASE is an optional
                string composed of alphanumeric characters describing if the build is
                a release candidate, alpha or beta version, with a number.
                BUILD is also an optional string composed of alphanumeric
