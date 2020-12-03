@@ -7,6 +7,9 @@ SEMVER_REGEX="^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-
 IDENTIFIER_REGEX="^\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$"
 NUMERIC_REGEX='^[0-9]+$'
 
+# Length limit for the branch name in build metadata.
+MAX_BRANCH_LENGTH=50
+
 # Global variables
 FIRST_VERSION="v0.0.0"
 finalversion=$FIRST_VERSION
@@ -615,7 +618,7 @@ function get_current {
     eval "$1=$lastversion"
   else
     local __buildinfo="$(git rev-parse --short HEAD)"
-    local __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
+    local __currentbranch="$(git rev-parse --abbrev-ref HEAD | cut -c1-$MAX_BRANCH_LENGTH)"
     if [ "$__currentbranch" != "master" ]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
@@ -648,8 +651,7 @@ function get_current {
 }
 
 function init {
-  git fetch > /dev/null
-  TAGS="$(git tag)"
+  TAGS="$(git tag --merged)"
   IFS=$'\n' read -rd '' -a TAG_ARRAY <<<"$TAGS"
 
   get_latest ${TAG_ARRAY[@]}
