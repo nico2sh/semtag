@@ -37,7 +37,7 @@ Info commands:
 
 * `getfinal` Returns the current final version.
 * `getlast` Returns the last tagged version, it can be the final version or a non-final version.
-* `getcurrent` Returns the current version, it can be the tagged final version or a tagged non-final version. If there are unstaged or uncommitted changes, they will be included in the version, following this format: `<major>.<minor>.<patch>-dev.#+<branch>.<hash>`. Where `#` is the number of commits since the last final release, `branch` will be the current branch if we are not in `master` and `hash` is the git hash of the current commit.
+* `getcurrent` Returns the current version, it can be the tagged final version or a tagged non-final version. If there are unstaged or uncommitted changes, they will be included in the version, following this format: `<major>.<minor>.<patch>-dev.#+<branch>.<hash>`. Where `#` is the number of commits since the last final release, `branch` will be the current branch if we are not in the default branch (`master`, `main`, or other) and `hash` is the git hash of the current commit.
 * `get` Returns both last tagged version and current final version.
 
 Versioning commands:
@@ -87,7 +87,7 @@ def tagFinalVersion() {
     commandLine "$rootProject.projectDir/semtag", "final", "-s minor"
     standardOutput = hashStdOut
   }
-  
+
   doLast {
     project.version=getVersionTag()
   }

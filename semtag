@@ -51,7 +51,7 @@ Commands:
   getcurrent Returns the current version, based on the latest one, if there are uncommited or
                unstaged changes, they will be reflected in the version, adding the number of
                pending commits, current branch and commit hash.
-  final      Tags the current build as a final version, this only can be done on the master branch.
+  final      Tags the current build as a final version, this only can be done on the default branch.
   candidate  Tags the current build as a release candidate, the tag will contain all
                the commits from the last final version.
   alpha      Tags the current build as an alpha version, the tag will contain all
@@ -89,6 +89,25 @@ while getopts "v:s:of" opt; do
       ;;
   esac
 done
+
+# Try to programmatically fetch the default branch. Go by the first remote HEAD found, otherwise default to `master`.
+# $1 The variable to store the result
+function get_default_branch {
+  local __result=$1
+
+  local __remotes=$(git remote)
+  if [[ -n $__remotes ]]; then
+    for __remote in $__remotes; do
+      local __default_branch_ref=$(git symbolic-ref --quiet refs/remotes/${__remote}/HEAD || true)
+      local __default_branch=${__default_branch_ref#refs/remotes/${__remote}/}
+      if [[ -n ${__default_branch} ]]; then
+        break
+      fi
+    done
+  fi
+
+  eval "${__result}=${__default_branch:-master}"
+}
 
 # Gets a string with the version and returns an array of maximum size of 5 with all the parts of the sematinc version
 # $1 The string containing the version in semantic format
@@ -158,7 +177,7 @@ function compare_numeric {
   local __first=$1
   local __second=$2
   local __result=$3
-  
+
   if (( "$__first" < "$__second" )) ; then
     eval "$__result=-1"
   elif (( "$__first" > "$__second" )) ; then
@@ -176,7 +195,7 @@ function compare_alphanumeric {
   local __first=$1
   local __second=$2
   local __result=$3
-  
+
   if [[ "$__first" < "$__second" ]] ; then
     eval "$__result=-1"
   elif [[ "$__first" > "$__second" ]] ; then
@@ -195,7 +214,7 @@ function get_latest_of_two {
   local __second=$2
   local __result
   local __latest=$3
-  
+
   compare_versions $__first $__second __result
   case $__result in
     0)
@@ -219,14 +238,14 @@ function compare_identifier_part {
   local __second=$2
   local __result=$3
   local compareresult
-  
+
   if [[ "$__first" =~ $NUMERIC_REGEX ]] && [[ "$__second" =~ $NUMERIC_REGEX ]] ; then
     compare_numeric "$__first" "$__second" compareresult
     eval "$__result=$compareresult"
     return 0
   fi
-  
-  
+
+
   compare_alphanumeric "$__first" "$__second" compareresult
   eval "$__result=$compareresult"
 }
@@ -244,13 +263,13 @@ function compare_identifiers {
   if [[ -n "$__first" ]] && [[ -n "$__second" ]]; then
     explode_identifier "${__first}" explodedidentifierfirst
     explode_identifier "${__second}" explodedidentifiersecond
-    
-    firstsize=${#explodedidentifierfirst[@]}    
+
+    firstsize=${#explodedidentifierfirst[@]}
     secondsize=${#explodedidentifiersecond[@]}
     minlength=$(( $firstsize<$secondsize ? $firstsize : $secondsize ))
     for (( i = 0 ; i < $minlength ; i++ )); do
       compare_identifier_part "${explodedidentifierfirst[$i]}" "${explodedidentifiersecond[$i]}" partresult
-      case $partresult in 
+      case $partresult in
         0)
           ;;
         *)
@@ -616,7 +635,8 @@ function get_current {
   else
     local __buildinfo="$(git rev-parse --short HEAD)"
     local __currentbranch="$(git rev-parse --abbrev-ref HEAD)"
-    if [ "$__currentbranch" != "master" ]; then
+    get_default_branch default_branch
+    if [ "$__currentbranch" != "$default_branch" ]; then
       __buildinfo="$__currentbranch.$__buildinfo"
     fi
 
@@ -665,10 +685,11 @@ case $ACTION in
     ;;
   final)
     init
-    diff=$(git diff master | cat)
+    get_default_branch default_branch
+    diff=$(git diff $default_branch | cat)
     if [ "$forcetag" == "false" ]; then
       if [ -n "$diff" ]; then
-        echo "ERROR: Branch must be updated with master for final versions"
+        echo "ERROR: Branch must be updated with $default_branch for final versions"
         exit 1
       fi
     fi
