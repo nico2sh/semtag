@@ -138,7 +138,7 @@ Semtag doesn't tag if there are no new commits since the last version, or if the
 
 ### Version prefix
 
-By default, semtag prefixes new versions with `v`. Use the `-p` (plain) flag which to create new versions with no `v` prefix.
+By default, semtag prefixes new versions with `v`. Use the `-p` (plain) flag to create new versions with no `v` prefix.
 
 License
 =======
