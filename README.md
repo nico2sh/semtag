@@ -30,7 +30,7 @@ Starts from version `0.0.0`, so the first time you initialize a version, it will
 Use the script as follows:
 
 ```
-$ semtag <commdand> <options>
+$ semtag <command> <options>
 ```
 
 Info commands:
