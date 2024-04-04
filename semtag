@@ -513,7 +513,7 @@ $__commitlist"
         git config user.email "$__username@$__useremail"
       fi
 
-      git tag -a $__version -m "$__message"
+      git tag -a $__version -m "$__message"  || exit 1
 
       # If we have a remote, we push there
       local __remotes=$(git remote)
