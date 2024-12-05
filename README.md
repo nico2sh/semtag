@@ -17,7 +17,7 @@ Portability, mostly. You can use the script in any project that uses Git as a ve
 
 Nebula Release is for releasing and publishing components and tries to automate the whole process from tagging to publishing. The goal of the `semtag` script is to only tag release versions, leaving the release process up to the developer.
 
-Plus, the `semtag` sctipt doesn't depend on the build system (so no need to use Gradle), so it can be used in any project.
+Plus, the `semtag` script doesn't depend on the build system (so no need to use Gradle), so it can be used in any project.
 
 ## Usage
 
