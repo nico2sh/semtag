@@ -1,7 +1,8 @@
 # Semtag
+
 Semantic Tagging Script for Git
 
-[Version: v0.1.2]
+[Version: v0.2.0]
 
 Notes: *This script is inspired by the [Nebula Release Plugin](https://github.com/nebula-plugins/nebula-release-plugin), and borrows a couple of lines from [Semver Bash Tool](https://github.com/fsaintjacques/semver-tool) (mostly the version comparison and the semantic version regex).*
 
@@ -30,7 +31,7 @@ Starts from version `0.0.0`, so the first time you initialize a version, it will
 Use the script as follows:
 
 ```
-$ semtag <command> <options>
+semtag <command> <options>
 ```
 
 Info commands:
@@ -142,6 +143,7 @@ By default, semtag prefixes new versions with `v`. Use the `-p` (plain) flag to 
 
 License
 =======
+
     Copyright 2020 Nico Hormazábal
 
     Licensed under the Apache License, Version 2.0 (the "License");

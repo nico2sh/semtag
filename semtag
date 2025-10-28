@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# semtag - Semantic Version Tagging Tool (Refactored)
-# Simplified, more maintainable version with improved error handling
+# semtag - Semantic Version Tagging Tool
 
-set -euo pipefail  # Fail fast and prevent undefined variable usage
+set -euo pipefail # Fail fast and prevent undefined variable usage
 
 readonly PROG="semtag"
 readonly PROG_VERSION="v0.1.2"
@@ -15,20 +14,20 @@ readonly FIRST_VERSION="v0.0.0"
 
 # Configuration structure to replace global variables
 declare -A CONFIG=(
-    [scope]="patch"
-    [display_only]="false"
-    [force_tag]="false"
-    [prefix]="v"
-    [forced_version]=""
-    [version_name]=""
-    [identifier]=""
+  [scope]="patch"
+  [display_only]="false"
+  [force_tag]="false"
+  [prefix]="v"
+  [forced_version]=""
+  [version_name]=""
+  [identifier]=""
 )
 
 # Version state structure
 declare -A VERSION_STATE=(
-    [final_version]="$FIRST_VERSION"
-    [last_version]="$FIRST_VERSION"
-    [has_version_tag]="false"
+  [final_version]="$FIRST_VERSION"
+  [last_version]="$FIRST_VERSION"
+  [has_version_tag]="false"
 )
 
 readonly HELP="Usage:
@@ -59,434 +58,435 @@ Commands:
 
 # Utility functions
 log() {
-    echo "$@" >&2
+  echo "$@" >&2
 }
 
 error() {
-    log "ERROR: $*"
-    exit 1
+  log "ERROR: $*"
+  exit 1
 }
 
 # Improved version parsing without eval
 parse_version() {
-    local version="$1"
-    local -n result_ref=$2
+  local version="$1"
+  local -n result_ref=$2
 
-    if [[ $version =~ $SEMVER_REGEX ]]; then
-        result_ref[major]="${BASH_REMATCH[1]}"
-        result_ref[minor]="${BASH_REMATCH[2]}"
-        result_ref[patch]="${BASH_REMATCH[3]}"
-        result_ref[prerelease]="${BASH_REMATCH[4]}"
-        result_ref[build]="${BASH_REMATCH[5]}"
-        return 0
-    else
-        unset result_ref
-        return 1
-    fi
+  if [[ $version =~ $SEMVER_REGEX ]]; then
+    result_ref[major]="${BASH_REMATCH[1]}"
+    result_ref[minor]="${BASH_REMATCH[2]}"
+    result_ref[patch]="${BASH_REMATCH[3]}"
+    result_ref[prerelease]="${BASH_REMATCH[4]}"
+    result_ref[build]="${BASH_REMATCH[5]}"
+    return 0
+  else
+    unset result_ref
+    return 1
+  fi
 }
 
 # Simplified version comparison without eval
 compare_versions() {
-    local version1="$1"
-    local version2="$2"
+  local version1="$1"
+  local version2="$2"
 
-    local -A v1 v2
-    parse_version "$version1" v1 || return 2
-    parse_version "$version2" v2 || return 2
+  local -A v1 v2
+  parse_version "$version1" v1 || return 2
+  parse_version "$version2" v2 || return 2
 
-    # Compare major, minor, patch
-    for component in major minor patch; do
-        if (( v1[$component] < v2[$component] )); then
-            echo -1
-            return 0
-        elif (( v1[$component] > v2[$component] )); then
-            echo 1
-            return 0
-        fi
-    done
-
-    # Handle prerelease comparison
-    local pre1="${v1[prerelease]}"
-    local pre2="${v2[prerelease]}"
-
-    if [[ -z "$pre1" && -n "$pre2" ]]; then
-        echo 1  # Release > prerelease
-    elif [[ -n "$pre1" && -z "$pre2" ]]; then
-        echo -1  # Prerelease < release
-    elif [[ -n "$pre1" && -n "$pre2" ]]; then
-        if [[ "$pre1" < "$pre2" ]]; then
-            echo -1
-        elif [[ "$pre1" > "$pre2" ]]; then
-            echo 1
-        else
-            echo 0
-        fi
-    else
-        echo 0
+  # Compare major, minor, patch
+  for component in major minor patch; do
+    if ((v1[$component] < v2[$component])); then
+      echo -1
+      return 0
+    elif ((v1[$component] > v2[$component])); then
+      echo 1
+      return 0
     fi
+  done
+
+  # Handle prerelease comparison
+  local pre1="${v1[prerelease]}"
+  local pre2="${v2[prerelease]}"
+
+  if [[ -z "$pre1" && -n "$pre2" ]]; then
+    echo 1 # Release > prerelease
+  elif [[ -n "$pre1" && -z "$pre2" ]]; then
+    echo -1 # Prerelease < release
+  elif [[ -n "$pre1" && -n "$pre2" ]]; then
+    if [[ "$pre1" < "$pre2" ]]; then
+      echo -1
+    elif [[ "$pre1" > "$pre2" ]]; then
+      echo 1
+    else
+      echo 0
+    fi
+  else
+    echo 0
+  fi
 }
 
 # Get the default branch (simplified)
 get_default_branch() {
-    local remotes
-    remotes=$(git remote 2>/dev/null || echo "")
+  local remotes
+  remotes=$(git remote 2>/dev/null || echo "")
 
-    for remote in $remotes; do
-        local default_branch_ref
-        default_branch_ref=$(git symbolic-ref --quiet "refs/remotes/${remote}/HEAD" 2>/dev/null || echo "")
-        if [[ -n $default_branch_ref ]]; then
-            echo "${default_branch_ref#refs/remotes/${remote}/}"
-            return 0
-        fi
-    done
+  for remote in $remotes; do
+    local default_branch_ref
+    default_branch_ref=$(git symbolic-ref --quiet "refs/remotes/${remote}/HEAD" 2>/dev/null || echo "")
+    if [[ -n $default_branch_ref ]]; then
+      echo "${default_branch_ref#refs/remotes/${remote}/}"
+      return 0
+    fi
+  done
 
-    echo "master"  # fallback
+  echo "master" # fallback
 }
 
 # Simplified git status check
 check_git_status() {
-    git update-index -q --ignore-submodules --refresh >/dev/null 2>&1
+  git update-index -q --ignore-submodules --refresh >/dev/null 2>&1
 
-    if ! git diff-files --quiet --ignore-submodules 2>/dev/null; then
-        echo "unstaged"
-        return 1
-    fi
+  if ! git diff-files --quiet --ignore-submodules 2>/dev/null; then
+    echo "unstaged"
+    return 1
+  fi
 
-    if ! git diff-index --cached --quiet HEAD --ignore-submodules 2>/dev/null; then
-        echo "uncommitted"
-        return 1
-    fi
+  if ! git diff-index --cached --quiet HEAD --ignore-submodules 2>/dev/null; then
+    echo "uncommitted"
+    return 1
+  fi
 
-    echo "clean"
-    return 0
+  echo "clean"
+  return 0
 }
 
 # Get latest versions from tags (simplified logic)
 analyze_tags() {
-    local -a tags
-    mapfile -t tags < <(git tag --merged 2>/dev/null | grep -E "$SEMVER_REGEX" || echo "")
+  local -a tags
+  mapfile -t tags < <(git tag --merged 2>/dev/null | grep -E "$SEMVER_REGEX" || echo "")
 
-    local final_version="$FIRST_VERSION"
-    local last_version="$FIRST_VERSION"
+  local final_version="$FIRST_VERSION"
+  local last_version="$FIRST_VERSION"
 
-    for tag in "${tags[@]}"; do
-        if [[ -z "$tag" ]]; then continue; fi
+  for tag in "${tags[@]}"; do
+    if [[ -z "$tag" ]]; then continue; fi
 
-        local -A parsed
-        if ! parse_version "$tag" parsed; then continue; fi
+    local -A parsed
+    if ! parse_version "$tag" parsed; then continue; fi
 
-        # Update last version (any version)
-        if [[ $(compare_versions "$tag" "$last_version") -eq 1 ]]; then
-            last_version="$tag"
-        fi
+    # Update last version (any version)
+    if [[ $(compare_versions "$tag" "$last_version") -eq 1 ]]; then
+      last_version="$tag"
+    fi
 
-        # Update final version (only non-prerelease)
-        if [[ -z "${parsed[prerelease]}" && $(compare_versions "$tag" "$final_version") -eq 1 ]]; then
-            final_version="$tag"
-        fi
-    done
+    # Update final version (only non-prerelease)
+    if [[ -z "${parsed[prerelease]}" && $(compare_versions "$tag" "$final_version") -eq 1 ]]; then
+      final_version="$tag"
+    fi
+  done
 
-    VERSION_STATE[final_version]="$final_version"
-    VERSION_STATE[last_version]="$last_version"
-    VERSION_STATE[has_version_tag]=$( [[ "$last_version" != "$FIRST_VERSION" ]] && echo "true" || echo "false" )
+  VERSION_STATE[final_version]="$final_version"
+  VERSION_STATE[last_version]="$last_version"
+  VERSION_STATE[has_version_tag]=$([[ "$last_version" != "$FIRST_VERSION" ]] && echo "true" || echo "false")
 }
 
 # Simplified version bumping
 bump_version() {
-    local scope="${CONFIG[scope]}"
-    local base_version="${VERSION_STATE[final_version]}"
+  local scope="${CONFIG[scope]}"
+  local base_version="${VERSION_STATE[final_version]}"
 
-    # Handle auto scope
-    if [[ "$scope" == "auto" ]]; then
-        scope=$(get_auto_scope)
-    fi
+  # Handle auto scope
+  if [[ "$scope" == "auto" ]]; then
+    scope=$(get_auto_scope)
+  fi
 
-    local -A parsed
-    parse_version "$base_version" parsed || error "Cannot parse base version: $base_version"
+  local -A parsed
+  parse_version "$base_version" parsed || error "Cannot parse base version: $base_version"
 
-    case "$scope" in
-        major)
-            ((parsed[major]++))
-            parsed[minor]=0
-            parsed[patch]=0
-            ;;
-        minor)
-            ((parsed[minor]++))
-            parsed[patch]=0
-            ;;
-        patch)
-            ((parsed[patch]++))
-            ;;
-        *)
-            error "Invalid scope: $scope"
-            ;;
-    esac
+  case "$scope" in
+  major)
+    ((parsed[major]++))
+    parsed[minor]=0
+    parsed[patch]=0
+    ;;
+  minor)
+    ((parsed[minor]++))
+    parsed[patch]=0
+    ;;
+  patch)
+    ((parsed[patch]++))
+    ;;
+  *)
+    error "Invalid scope: $scope"
+    ;;
+  esac
 
-    local new_version="${CONFIG[prefix]}${parsed[major]}.${parsed[minor]}.${parsed[patch]}"
+  local new_version="${CONFIG[prefix]}${parsed[major]}.${parsed[minor]}.${parsed[patch]}"
 
-    # Add identifier if specified
-    if [[ -n "${CONFIG[identifier]}" ]]; then
-        new_version="${new_version}-${CONFIG[identifier]}.1"
-    fi
+  # Add identifier if specified
+  if [[ -n "${CONFIG[identifier]}" ]]; then
+    new_version="${new_version}-${CONFIG[identifier]}.1"
+  fi
 
-    echo "$new_version"
+  echo "$new_version"
 }
 
 # Simplified auto scope detection
 get_auto_scope() {
-    local total_lines changed_lines
+  local total_lines changed_lines
 
-    # Get total lines (simplified)
-    total_lines=$(git ls-files | xargs wc -l 2>/dev/null | tail -n1 | awk '{print $1}' || echo "0")
+  # Get total lines (simplified)
+  total_lines=$(git ls-files | xargs wc -l 2>/dev/null | tail -n1 | awk '{print $1}' || echo "0")
 
-    # Get changed lines since final version
-    if [[ "${VERSION_STATE[final_version]}" != "$FIRST_VERSION" ]]; then
-        changed_lines=$(git diff --numstat "${VERSION_STATE[final_version]}" 2>/dev/null | \
-                       awk '{sum += $1} END {print sum+0}' || echo "0")
+  # Get changed lines since final version
+  if [[ "${VERSION_STATE[final_version]}" != "$FIRST_VERSION" ]]; then
+    changed_lines=$(git diff --numstat "${VERSION_STATE[final_version]}" 2>/dev/null |
+      awk '{sum += $1} END {print sum+0}' || echo "0")
+  else
+    changed_lines="$total_lines"
+  fi
+
+  if [[ $total_lines -gt 0 ]]; then
+    local percentage=$(((changed_lines * 100) / total_lines))
+    if [[ $percentage -gt 10 ]]; then
+      echo "minor"
     else
-        changed_lines="$total_lines"
+      echo "patch"
     fi
-
-    if [[ $total_lines -gt 0 ]]; then
-        local percentage=$(( (changed_lines * 100) / total_lines ))
-        if [[ $percentage -gt 10 ]]; then
-            echo "minor"
-        else
-            echo "patch"
-        fi
-    else
-        echo "patch"
-    fi
+  else
+    echo "patch"
+  fi
 }
 
 # Simplified tagging function
 create_tag() {
-    local version="$1"
-    local commit_list
+  local version="$1"
+  local commit_list
 
-    # Validate version if forced
-    if [[ -n "${CONFIG[forced_version]}" ]]; then
-        local -A parsed
-        parse_version "${CONFIG[forced_version]}" parsed || error "Invalid forced version format"
+  # Validate version if forced
+  if [[ -n "${CONFIG[forced_version]}" ]]; then
+    local -A parsed
+    parse_version "${CONFIG[forced_version]}" parsed || error "Invalid forced version format"
 
-        if [[ $(compare_versions "${CONFIG[forced_version]}" "${VERSION_STATE[last_version]}") -le 0 ]]; then
-            error "Forced version must be greater than last version: ${VERSION_STATE[last_version]}"
-        fi
-        version="${CONFIG[forced_version]}"
+    if [[ $(compare_versions "${CONFIG[forced_version]}" "${VERSION_STATE[last_version]}") -le 0 ]]; then
+      error "Forced version must be greater than last version: ${VERSION_STATE[last_version]}"
     fi
+    version="${CONFIG[forced_version]}"
+  fi
 
-    # Display only mode
-    if [[ "${CONFIG[display_only]}" == "true" ]]; then
-        echo "$version"
-        return 0
+  # Display only mode
+  if [[ "${CONFIG[display_only]}" == "true" ]]; then
+    echo "$version"
+    return 0
+  fi
+
+  # Check git status unless forced
+  if [[ "${CONFIG[force_tag]}" == "false" ]]; then
+    local status
+    status=$(check_git_status)
+    if [[ "$status" != "clean" ]]; then
+      error "Repository has $status changes. Use -f to force."
     fi
+  fi
 
-    # Check git status unless forced
-    if [[ "${CONFIG[force_tag]}" == "false" ]]; then
-        local status
-        status=$(check_git_status)
-        if [[ "$status" != "clean" ]]; then
-            error "Repository has $status changes. Use -f to force."
-        fi
-    fi
+  # Get commit list
+  if [[ "${VERSION_STATE[final_version]}" == "$FIRST_VERSION" || "${VERSION_STATE[has_version_tag]}" != "true" ]]; then
+    commit_list=$(git log --oneline --no-merges | head -20 || echo "Initial version")
+  else
+    commit_list=$(git log --oneline --no-merges "${VERSION_STATE[final_version]}.." | head -20 || echo "")
+  fi
 
-    # Get commit list
-    if [[ "${VERSION_STATE[final_version]}" == "$FIRST_VERSION" || "${VERSION_STATE[has_version_tag]}" != "true" ]]; then
-        commit_list=$(git log --oneline --no-merges | head -20 || echo "Initial version")
-    else
-        commit_list=$(git log --oneline --no-merges "${VERSION_STATE[final_version]}.." | head -20 || echo "")
-    fi
+  # Force bump if no commits but forced
+  if [[ -z "$commit_list" && "${CONFIG[force_tag]}" == "true" ]]; then
+    commit_list="Forced version bump"
+  fi
 
-    # Force bump if no commits but forced
-    if [[ -z "$commit_list" && "${CONFIG[force_tag]}" == "true" ]]; then
-        commit_list="Forced version bump"
-    fi
+  if [[ -z "$commit_list" ]]; then
+    log "No commits since last final version, not creating tag"
+    return 0
+  fi
 
-    if [[ -z "$commit_list" ]]; then
-        log "No commits since last final version, not creating tag"
-        return 0
-    fi
+  # Ensure git user config
+  setup_git_user
 
-    # Ensure git user config
-    setup_git_user
-
-    # Create tag
-    local tag_message="${CONFIG[version_name]:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}
+  # Create tag
+  local tag_message="${CONFIG[version_name]:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}
 $commit_list"
 
-    git tag -a "$version" -m "$tag_message" || error "Failed to create tag"
+  git tag -a "$version" -m "$tag_message" || error "Failed to create tag"
 
-    # Push to remotes
-    push_tag_to_remotes "$version"
+  # Push to remotes
+  push_tag_to_remotes "$version"
 
-    echo "$version"
+  echo "$version"
 }
 
 # Setup git user if not configured
 setup_git_user() {
-    if [[ -z "$(git config user.name 2>/dev/null || echo "")" ]]; then
-        git config user.name "$(id -u -n)"
-    fi
+  if [[ -z "$(git config user.name 2>/dev/null || echo "")" ]]; then
+    git config user.name "$(id -u -n)"
+  fi
 
-    if [[ -z "$(git config user.email 2>/dev/null || echo "")" ]]; then
-        git config user.email "$(id -u -n)@$(hostname)"
-    fi
+  if [[ -z "$(git config user.email 2>/dev/null || echo "")" ]]; then
+    git config user.email "$(id -u -n)@$(hostname)"
+  fi
 }
 
 # Push tag to all remotes
 push_tag_to_remotes() {
-    local version="$1"
-    local remotes
-    remotes=$(git remote 2>/dev/null || echo "")
+  local version="$1"
+  local remotes
+  remotes=$(git remote 2>/dev/null || echo "")
 
-    if [[ -n "$remotes" ]]; then
-        for remote in $remotes; do
-            if git push "$remote" "$version" >/dev/null 2>&1; then
-                log "$version pushed to $remote"
-            else
-                error "Failed to push tag $version to $remote"
-            fi
-        done
-    fi
+  if [[ -n "$remotes" ]]; then
+    for remote in $remotes; do
+      if git push "$remote" "$version" >/dev/null 2>&1; then
+        log "$version pushed to $remote"
+      else
+        error "Failed to push tag $version to $remote"
+      fi
+    done
+  fi
 }
 
 # Get current version with build info
 get_current_version() {
-    local commit_count
-    if [[ "${VERSION_STATE[has_version_tag]}" == "true" ]]; then
-        commit_count=$(git rev-list "${VERSION_STATE[last_version]}.." --count 2>/dev/null || echo "0")
-    else
-        commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
-    fi
+  local commit_count
+  if [[ "${VERSION_STATE[has_version_tag]}" == "true" ]]; then
+    commit_count=$(git rev-list "${VERSION_STATE[last_version]}.." --count 2>/dev/null || echo "0")
+  else
+    commit_count=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+  fi
 
-    local status
-    status=$(check_git_status)
+  local status
+  status=$(check_git_status)
 
-    if [[ "$commit_count" == "0" && "$status" == "clean" ]]; then
-        echo "${VERSION_STATE[last_version]}"
-        return 0
-    fi
+  if [[ "$commit_count" == "0" && "$status" == "clean" ]]; then
+    echo "${VERSION_STATE[last_version]}"
+    return 0
+  fi
 
-    # Build version with metadata
-    local build_info
-    build_info=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+  # Build version with metadata
+  local build_info
+  build_info=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-    local current_branch
-    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | cut -c1-$MAX_BRANCH_LENGTH || echo "unknown")
+  local current_branch
+  current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null | cut -c1-$MAX_BRANCH_LENGTH || echo "unknown")
 
-    local default_branch
-    default_branch=$(get_default_branch)
+  local default_branch
+  default_branch=$(get_default_branch)
 
-    if [[ "$current_branch" != "$default_branch" ]]; then
-        build_info="$current_branch.$build_info"
-    fi
+  if [[ "$current_branch" != "$default_branch" ]]; then
+    build_info="$current_branch.$build_info"
+  fi
 
-    # Build suffix
-    local suffix=""
-    if [[ "$commit_count" != "0" ]]; then
-        suffix="${commit_count}"
-    fi
+  # Build suffix
+  local suffix=""
+  if [[ "$commit_count" != "0" ]]; then
+    suffix="${commit_count}"
+  fi
 
-    if [[ "$status" != "clean" ]]; then
-        suffix="${suffix:+$suffix.}$status"
-    fi
+  if [[ "$status" != "clean" ]]; then
+    suffix="${suffix:+$suffix.}$status"
+  fi
 
-    if [[ "${VERSION_STATE[last_version]}" == "${VERSION_STATE[final_version]}" ]]; then
-        # Need to bump for development version
-        local -A parsed
-        parse_version "${VERSION_STATE[final_version]}" parsed
-        ((parsed[patch]++))
-        local dev_version="${CONFIG[prefix]}${parsed[major]}.${parsed[minor]}.${parsed[patch]}"
-        echo "${dev_version}-dev.${suffix}+${build_info}"
-    else
-        echo "${VERSION_STATE[last_version]}.${suffix}+${build_info}"
-    fi
+  if [[ "${VERSION_STATE[last_version]}" == "${VERSION_STATE[final_version]}" ]]; then
+    # Need to bump for development version
+    local -A parsed
+    parse_version "${VERSION_STATE[final_version]}" parsed
+    ((parsed[patch]++))
+    local dev_version="${CONFIG[prefix]}${parsed[major]}.${parsed[minor]}.${parsed[patch]}"
+    echo "${dev_version}-dev.${suffix}+${build_info}"
+  else
+    echo "${VERSION_STATE[last_version]}.${suffix}+${build_info}"
+  fi
 }
 
 # Parse command line arguments
 parse_arguments() {
-    while getopts "v:s:ofp" opt; do
-        case $opt in
-            v) CONFIG[forced_version]="$OPTARG" ;;
-            s) CONFIG[scope]="$OPTARG" ;;
-            o) CONFIG[display_only]="true" ;;
-            f) CONFIG[force_tag]="true" ;;
-            p) CONFIG[prefix]="" ;;
-            \?) error "Invalid option: -$OPTARG" ;;
-            :) error "Option -$OPTARG requires an argument" ;;
-        esac
-    done
+  while getopts "v:s:ofp" opt; do
+    case $opt in
+    v) CONFIG[forced_version]="$OPTARG" ;;
+    s) CONFIG[scope]="$OPTARG" ;;
+    o) CONFIG[display_only]="true" ;;
+    f) CONFIG[force_tag]="true" ;;
+    p) CONFIG[prefix]="" ;;
+    \?) error "Invalid option: -$OPTARG" ;;
+    :) error "Option -$OPTARG requires an argument" ;;
+    esac
+  done
 }
 
 # Main execution function
 main() {
-    local action="${1:-getlast}"
-    shift 2>/dev/null || true
+  local action="${1:-getlast}"
+  shift 2>/dev/null || true
 
-    parse_arguments "$@"
+  parse_arguments "$@"
 
-    case "$action" in
-        --help)
-            echo "$HELP"
-            ;;
-        --version)
-            echo "${PROG}: $PROG_VERSION"
-            ;;
-        final)
-            analyze_tags
-            local default_branch
-            default_branch=$(get_default_branch)
+  case "$action" in
+  --help)
+    echo "$HELP"
+    ;;
+  --version)
+    echo "${PROG}: $PROG_VERSION"
+    ;;
+  final)
+    analyze_tags
+    local default_branch
+    default_branch=$(get_default_branch)
 
-            if [[ "${CONFIG[force_tag]}" == "false" ]]; then
-                local diff
-                diff=$(git diff "$default_branch" 2>/dev/null || echo "no-diff")
-                if [[ -n "$diff" && "$diff" != "no-diff" ]]; then
-                    error "Branch must be updated with $default_branch for final versions"
-                fi
-            fi
+    if [[ "${CONFIG[force_tag]}" == "false" ]]; then
+      local diff
+      diff=$(git diff "$default_branch" 2>/dev/null || echo "no-diff")
+      if [[ -n "$diff" && "$diff" != "no-diff" ]]; then
+        error "Branch must be updated with $default_branch for final versions"
+      fi
+    fi
 
-            local version
-            version=$(bump_version)
-            create_tag "$version"
-            ;;
-        alpha|beta)
-            analyze_tags
-            CONFIG[identifier]="$action"
-            local version
-            version=$(bump_version)
-            create_tag "$version"
-            ;;
-        candidate)
-            analyze_tags
-            CONFIG[identifier]="rc"
-            local version
-            version=$(bump_version)
-            create_tag "$version"
-            ;;
-        getlast)
-            analyze_tags
-            echo "${VERSION_STATE[last_version]}"
-            ;;
-        getfinal)
-            analyze_tags
-            echo "${VERSION_STATE[final_version]}"
-            ;;
-        getcurrent)
-            analyze_tags
-            get_current_version
-            ;;
-        get)
-            analyze_tags
-            echo "Current final version: ${VERSION_STATE[final_version]}"
-            echo "Last tagged version:   ${VERSION_STATE[last_version]}"
-            ;;
-        *)
-            error "'$action' is not a valid command, see --help for available commands."
-            ;;
-    esac
+    local version
+    version=$(bump_version)
+    create_tag "$version"
+    ;;
+  alpha | beta)
+    analyze_tags
+    CONFIG[identifier]="$action"
+    local version
+    version=$(bump_version)
+    create_tag "$version"
+    ;;
+  candidate)
+    analyze_tags
+    CONFIG[identifier]="rc"
+    local version
+    version=$(bump_version)
+    create_tag "$version"
+    ;;
+  getlast)
+    analyze_tags
+    echo "${VERSION_STATE[last_version]}"
+    ;;
+  getfinal)
+    analyze_tags
+    echo "${VERSION_STATE[final_version]}"
+    ;;
+  getcurrent)
+    analyze_tags
+    get_current_version
+    ;;
+  get)
+    analyze_tags
+    echo "Current final version: ${VERSION_STATE[final_version]}"
+    echo "Last tagged version:   ${VERSION_STATE[last_version]}"
+    ;;
+  *)
+    error "'$action' is not a valid command, see --help for available commands."
+    ;;
+  esac
 }
 
 # Only run main if script is executed directly (not sourced)
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+  main "$@"
 fi
+
