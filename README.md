@@ -141,6 +141,42 @@ Semtag doesn't tag if there are no new commits since the last version, or if the
 
 By default, semtag prefixes new versions with `v`. Use the `-p` (plain) flag to create new versions with no `v` prefix.
 
+### Tag prefix
+
+For projects managing multiple components in a single repository, you can use custom tag prefixes to organize versions independently. Use the `-P <prefix>` flag to add a custom prefix to your tags.
+
+```bash
+# Default behavior
+semtag alpha -s patch               # Creates: v0.0.1-alpha.1
+
+# With custom prefix
+semtag alpha -s patch -P service    # Creates: service-v0.0.1-alpha.1
+
+# Combine with -p flag for plain versions (no 'v')
+semtag alpha -s patch -P api -p     # Creates: api-0.0.1-alpha.1
+```
+
+Each tag prefix maintains its own independent version sequence, allowing you to version multiple components separately:
+
+```bash
+# Version the backend service
+semtag final -s minor -P backend    # Creates: backend-v0.1.0
+
+# Version the frontend independently
+semtag final -s patch -P frontend   # Creates: frontend-v0.0.1
+
+# Default tags remain separate
+semtag final -s major               # Creates: v1.0.0
+```
+
+Query versions by prefix:
+
+```bash
+semtag getlast -P backend           # Returns: backend-v0.1.0
+semtag getfinal -P frontend         # Returns: frontend-v0.0.1
+semtag getlast                      # Returns: v1.0.0
+```
+
 License
 =======
 
