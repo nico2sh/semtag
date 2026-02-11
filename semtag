@@ -353,7 +353,14 @@ function explode_identifier {
   if [[ "$__identifier" =~ $IDENTIFIER_REGEX ]] ; then
     local identifierparts
     IFS='-.' read -ra identifierparts <<< "$__identifier"
-    eval "$__result=( \"\${identifierparts[@]}\" )"
+    # Filter out empty elements (the first element is empty when splitting "-beta.1")
+    local filtered=()
+    for part in "${identifierparts[@]}"; do
+      if [[ -n "$part" ]]; then
+        filtered+=("$part")
+      fi
+    done
+    eval "$__result=( \"\${filtered[@]}\" )"
   else
     eval "$__result=()"
   fi
