@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This is a deprecated version
+
 PROG=semtag
 PROG_VERSION="v0.1.2"
 
