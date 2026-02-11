@@ -37,6 +37,7 @@ scope="patch"
 displayonly="false"
 forcetag="false"
 prefix="v"
+tag_prefix=""
 forcedversion=
 versionname=
 identifier=
@@ -65,6 +66,7 @@ Options:
   -o         Output the version only, shows the bumped version, but doesn't tag.
   -f         Forces to tag, even if there are unstaged or uncommited changes.
   -p         Use a plain version, ie. do not prefix with 'v'.
+  -P         Add a custom prefix to the tag (e.g., -P service generates service-v0.0.1).
 Commands:
   --help     Print this help message.
   --version  Prints the program's version.
@@ -105,7 +107,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 # We get the parameters
-while getopts "v:s:ofp" opt; do
+while getopts "v:s:ofpP:" opt; do
   case $opt in
     v)
       forcedversion="$OPTARG"
@@ -123,6 +125,9 @@ while getopts "v:s:ofp" opt; do
       ;;
     p)
       prefix=""
+      ;;
+    P)
+      tag_prefix="$OPTARG-"
       ;;
     \?)
       error_exit "Invalid option: -$OPTARG"
@@ -413,7 +418,7 @@ function get_latest {
       ;;
   esac
 
-  if git rev-parse -q --verify "refs/tags/$lastversion" >/dev/null 2>&1; then
+  if git rev-parse -q --verify "refs/tags/$tag_prefix$lastversion" >/dev/null 2>&1; then
     hasversiontag="true"
   else
     hasversiontag="false"
@@ -484,7 +489,7 @@ function bump_version {
   fi
 
   # Then we try to get the version based on the latest final one
-  local __candidatefromfinal=$FIRST_VERSION
+  local __candidatefromfinal
   get_next_version $finalversion $scope __candidatefromfinal
   if [[ -n "$identifier" ]]; then
     __candidatefromfinal="$__candidatefromfinal-$identifier.1"
@@ -527,6 +532,9 @@ function increase_version {
     __version="$forcedversion"
   fi
 
+  # Add the tag_prefix to the final version for output or tagging
+  __version="${tag_prefix}${__version}"
+
   if [ "$displayonly" == "true" ]; then
     echo "$__version"
   else
@@ -539,8 +547,8 @@ function increase_version {
         error_exit "Failed to get git commit log"
       fi
     else
-      if ! __commitlist=$(git log --pretty=oneline "$finalversion"... 2>/dev/null); then
-        error_exit "Failed to get git commit log from $finalversion"
+      if ! __commitlist=$(git log --pretty=oneline "$tag_prefix$finalversion"... 2>/dev/null); then
+        error_exit "Failed to get git commit log from $tag_prefix$finalversion"
       fi
     fi
 
@@ -684,7 +692,7 @@ function get_scope_auto {
   local __scope=""
 
   get_total_lines __total
-  get_sincetag_lines "$finalversion" __since
+  get_sincetag_lines "$tag_prefix$finalversion" __since
 
   local __percentage=0
   if [ "${__total[0]}" != "0" ]; then
@@ -728,8 +736,8 @@ function get_current {
   local __commitcount
 
   if [ "$hasversiontag" == "true" ]; then
-    if ! __commitcount=$(git rev-list "$lastversion".. --count 2>/dev/null); then
-      error_exit "Failed to get commit count from $lastversion"
+    if ! __commitcount=$(git rev-list "$tag_prefix$lastversion".. --count 2>/dev/null); then
+      error_exit "Failed to get commit count from $tag_prefix$lastversion"
     fi
   else
     if ! __commitcount=$(git rev-list --count HEAD 2>/dev/null); then
@@ -803,7 +811,23 @@ function init {
     TAG_ARRAY=()
   fi
 
-  get_latest "${TAG_ARRAY[@]}"
+  # Filter and strip tag_prefix from tags
+  local FILTERED_TAGS=()
+  if [[ ${#TAG_ARRAY[@]} -gt 0 ]]; then
+    for tag in "${TAG_ARRAY[@]}"; do
+      if [[ "$tag" == "$tag_prefix"* ]]; then
+        # Strip the tag_prefix from the tag
+        local stripped_tag="${tag#$tag_prefix}"
+        FILTERED_TAGS+=("$stripped_tag")
+      fi
+    done
+  fi
+
+  if [[ ${#FILTERED_TAGS[@]} -gt 0 ]]; then
+    get_latest "${FILTERED_TAGS[@]}"
+  else
+    get_latest
+  fi
 
   if ! currentbranch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); then
     error_exit "Failed to get current git branch"
@@ -844,11 +868,11 @@ case "$ACTION" in
     ;;
   getlast)
     init
-    echo "$lastversion"
+    echo "$tag_prefix$lastversion"
     ;;
   getfinal)
     init
-    echo "$finalversion"
+    echo "$tag_prefix$finalversion"
     ;;
   getcurrent)
     init
@@ -858,8 +882,8 @@ case "$ACTION" in
     ;;
   get)
     init
-    echo "Current final version: $finalversion"
-    echo "Last tagged version:   $lastversion"
+    echo "Current final version: $tag_prefix$finalversion"
+    echo "Last tagged version:   $tag_prefix$lastversion"
     ;;
   *)
     error_exit "'$ACTION' is not a valid command, see --help for available commands."
