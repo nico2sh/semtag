@@ -686,7 +686,7 @@ function get_changed_lines {
 
 function get_scope_auto {
   local __result="$1"
-  local __verbose="$2"
+  local __verbose="${2:-}"
   local __total=()
   local __since=()
   local __scope=""
